@@ -2,7 +2,7 @@
 
 A navigation stack for [Bubble Tea v2](https://charm.land/bubbletea) TUI applications.
 
-Compass is inspired by flutter and lets you manage multiple screens in your TUI app — push to navigate forward, pop to go back.
+Compass is inspired by flutter navigator and lets you manage multiple screens in your TUI app — push to navigate forward, pop to go back.
 
 ## Installation
 

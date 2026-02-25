@@ -95,9 +95,6 @@ func (m HomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case 1:
 				return m, tea.Quit
 			}
-
-		case "esc":
-			return m, func() tea.Msg { return NavigateBackMsg{} }
 		case "q":
 			return m, tea.Quit
 		}
