@@ -1,8 +1,6 @@
 package compass
 
 import (
-	"errors"
-
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -12,25 +10,46 @@ type Model struct {
 	screenEntries map[Screen]tea.Model
 	stack         []Screen
 	topIndex      int
+
+	options Options
 }
 
 // New creates a new Model with the given map of screens.
-func New(screenEntries map[Screen]tea.Model, initialScreen Screen) Model {
+func New(screenEntries map[Screen]tea.Model, initialScreen Screen, opts ...OptionFunc) Model {
 	if _, ok := screenEntries[initialScreen]; !ok {
-		panic("compass: initialScreen cannot be nil")
+		panic("compass: initialScreen entry cannot be nil")
+	}
+
+	options := Options{}
+	for _, opt := range opts {
+		opt(&options)
 	}
 
 	stack := []Screen{initialScreen}
 	return Model{
 		screenEntries: screenEntries,
 		stack:         stack,
+		options:       options,
 	}
 }
 
 // Update forwards the message to the model at the top of the navigation stack.
-// If the stack is empty, it is a no-op.
 func (m Model) Update(message tea.Msg) (Model, tea.Cmd) {
-	if m.topIndex == -1 {
+	switch message := message.(type) {
+	case tea.KeyPressMsg:
+		// key binds to exit if the stack is empty
+		if m.isStackEmpty() {
+			switch message.String() {
+			case "esc", "ctrl+c":
+				return m, tea.Quit
+			}
+		}
+
+	case popMsg:
+		if m.isStackEmpty() && m.options.AutoQuitOnEmpty {
+			return m, tea.Quit
+		}
+
 		return m, nil
 	}
 
@@ -44,19 +63,20 @@ func (m Model) Update(message tea.Msg) (Model, tea.Cmd) {
 // View renders the screen at the top of the navigation stack.
 // Returns an empty view if the stack is empty.
 func (m Model) View() tea.View {
-	if m.topIndex == -1 {
-		return tea.NewView("")
+	if m.isStackEmpty() {
+		return m.options.FallbackView
 	}
 
 	screen := m.stack[m.topIndex]
 	return m.screenEntries[screen].View()
 }
 
-// Push navigates to the given screen.
+// Push adds the given screen to the top of the navigation stack,
+// calls Init() on it, and forwards args to it via Update.
 func (m Model) Push(screen Screen, args tea.Msg) (Model, tea.Cmd) {
 	registeredModel, ok := m.screenEntries[screen]
 	if !ok {
-		panic("compass: screen not found in the screen entries; considering registering it.")
+		panic("compass: screen not found in the screen entries; consider registering it.")
 	}
 
 	m.topIndex++
@@ -67,35 +87,24 @@ func (m Model) Push(screen Screen, args tea.Msg) (Model, tea.Cmd) {
 		m.stack = append(m.stack, screen)
 	}
 
+	initCmd := registeredModel.Init()
 	if args == nil {
-		return m, nil
+		return m, initCmd
 	}
 
 	registeredModel, cmd := registeredModel.Update(args)
 	m.screenEntries[screen] = registeredModel
-	return m, cmd
-
+	return m, tea.Sequence(initCmd, cmd)
 }
 
 // Pop navigates back to the last pushed screen.
-func (m Model) Pop() Model {
-	m, err := m.CanPop()
-	if err != nil {
-		panic(err)
-	}
-
-	return m
-}
-
-// CanPop removes the top screen from the stack.
-// If pop is called on empty stack, an error is returned.
-func (m Model) CanPop() (Model, error) {
-	if m.topIndex == -1 {
-		return m, errors.New("compass: pop called on an empty navigation stack")
+func (m Model) Pop() (Model, tea.Cmd) {
+	if m.isStackEmpty() {
+		panic("compass: pop called on an empty navigation stack")
 	}
 
 	m.topIndex--
-	return m, nil
+	return m, func() tea.Msg { return popMsg{} }
 }
 
 // RegisterScreen associates a model with a screen identifier.
@@ -124,4 +133,8 @@ func (m Model) Broadcast(message tea.Msg) (Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m Model) isStackEmpty() bool {
+	return m.topIndex == -1
 }

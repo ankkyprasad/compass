@@ -27,10 +27,14 @@ type RootModel struct {
 }
 
 func NewRootModel() RootModel {
-	compass := compass.New(map[compass.Screen]tea.Model{
-		HomeScreen:   NewHomeModel(),
-		DetailScreen: NewDetailModel(),
-	}, HomeScreen)
+	compass := compass.New(
+		map[compass.Screen]tea.Model{
+			HomeScreen:   NewHomeModel(),
+			DetailScreen: NewDetailModel(),
+		},
+		HomeScreen,
+		compass.WithAutoQuitOnEmpty(true),
+	)
 
 	return RootModel{compass: compass}
 }
@@ -40,19 +44,19 @@ func (m RootModel) Init() tea.Cmd {
 }
 
 func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case NavigateMsg:
-		var cmd tea.Cmd
 		m.compass, cmd = m.compass.Push(msg.To, nil)
 		return m, cmd
 
 	case NavigateBackMsg:
-		m.compass = m.compass.Pop()
-		return m, nil
+		m.compass, cmd = m.compass.Pop()
+		return m, cmd
 	}
 
 	// Forward everything else to the active screen.
-	var cmd tea.Cmd
 	m.compass, cmd = m.compass.Update(msg)
 	return m, cmd
 }
@@ -95,6 +99,10 @@ func (m HomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case 1:
 				return m, tea.Quit
 			}
+
+		case "esc":
+			return m, func() tea.Msg { return NavigateBackMsg{} }
+
 		case "q":
 			return m, tea.Quit
 		}
