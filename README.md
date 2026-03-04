@@ -34,26 +34,35 @@ nav := compass.New(map[compass.Screen]tea.Model{
 }, HomeScreen)
 ```
 
-### 3. Embed it in your root model
+### 3. Integrate it in your root model
 
 ```go
+type NavigateMsg struct {
+    To compass.Screen
+}
+
+type NavigateBackMsg struct{}
+
+
 type RootModel struct {
     compass compass.Model
 }
 
 func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    switch msg := msg.(type) {
-    case NavigateMsg:
-        m.compass, cmd = m.compass.Push(msg.To)
-        return m, cmd
-    case NavigateBackMsg:
-        m.compass = m.compass.Pop()
-        return m, nil
-    }
+	var cmd tea.Cmd
 
-    var cmd tea.Cmd
-    m.compass, cmd = m.compass.Update(msg)
-    return m, cmd
+	switch msg := msg.(type) {
+	case NavigateMsg:
+		m.compass, cmd = m.compass.Push(msg.To, nil)
+		return m, cmd
+
+	case NavigateBackMsg:
+		m.compass, cmd = m.compass.Pop()
+		return m, cmd
+	}
+
+	m.compass, cmd = m.compass.Update(msg)
+	return m, cmd
 }
 
 func (m RootModel) View() tea.View {
@@ -72,3 +81,7 @@ return m, func() tea.Msg { return NavigateMsg{To: DetailScreen} }
 // Navigate back
 return m, func() tea.Msg { return NavigateBackMsg{} }
 ```
+
+## License
+
+Compass is licensed under the [MIT License](./LICENSE).
