@@ -1,4 +1,4 @@
-# compass
+# Compass
 
 A navigation stack for [Bubble Tea v2](https://charm.land/bubbletea) TUI applications.
 
