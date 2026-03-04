@@ -37,30 +37,12 @@ nav := compass.New(map[compass.Screen]tea.Model{
 ### 3. Integrate it in your root model
 
 ```go
-type NavigateMsg struct {
-    To compass.Screen
-}
-
-type NavigateBackMsg struct{}
-
-
 type RootModel struct {
     compass compass.Model
 }
 
 func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-
-	switch msg := msg.(type) {
-	case NavigateMsg:
-		m.compass, cmd = m.compass.Push(msg.To, nil)
-		return m, cmd
-
-	case NavigateBackMsg:
-		m.compass, cmd = m.compass.Pop()
-		return m, cmd
-	}
-
 	m.compass, cmd = m.compass.Update(msg)
 	return m, cmd
 }
@@ -75,11 +57,23 @@ func (m RootModel) View() tea.View {
 Send messages from within any screen model to trigger navigation:
 
 ```go
-// Navigate forward
-return m, func() tea.Msg { return NavigateMsg{To: DetailScreen} }
+func (m HomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "enter":
+			// Navigate forward to another screen. You can pass args in the second parameter.
+			return m, compass.Push(DetailScreen, nil)
 
-// Navigate back
-return m, func() tea.Msg { return NavigateBackMsg{} }
+		case "esc":
+			// Navigate back to the previous screen
+			return m, compass.PopCmd()
+
+		case "q":
+			return m, tea.Quit
+		}
+	}
+}
 ```
 
 ## License

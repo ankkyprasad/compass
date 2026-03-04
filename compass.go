@@ -35,6 +35,8 @@ func New(screenEntries map[Screen]tea.Model, initialScreen Screen, opts ...Optio
 
 // Update forwards the message to the model at the top of the navigation stack.
 func (m Model) Update(message tea.Msg) (Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch message := message.(type) {
 	case tea.KeyPressMsg:
 		// key binds to exit if the stack is empty
@@ -45,12 +47,17 @@ func (m Model) Update(message tea.Msg) (Model, tea.Cmd) {
 			}
 		}
 
-	case popMsg:
+	case NavigateBackMsg:
+		m = m.Pop()
 		if m.isStackEmpty() && m.options.AutoQuitOnEmpty {
 			return m, tea.Quit
 		}
 
 		return m, nil
+
+	case NavigateMsg:
+		m, cmd = m.Push(message.To, message.Argument)
+		return m, cmd
 	}
 
 	screen := m.stack[m.topIndex]
@@ -98,13 +105,13 @@ func (m Model) Push(screen Screen, args tea.Msg) (Model, tea.Cmd) {
 }
 
 // Pop navigates back to the last pushed screen.
-func (m Model) Pop() (Model, tea.Cmd) {
+func (m Model) Pop() Model {
 	if m.isStackEmpty() {
 		panic("compass: pop called on an empty navigation stack")
 	}
 
 	m.topIndex--
-	return m, func() tea.Msg { return popMsg{} }
+	return m
 }
 
 // RegisterScreen associates a model with a screen identifier.

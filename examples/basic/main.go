@@ -17,11 +17,6 @@ const (
 	AnotherDetailScreen
 )
 
-// --- Navigation messages ---
-
-type NavigateMsg struct{ To compass.Screen }
-type NavigateBackMsg struct{}
-
 type RootModel struct {
 	compass compass.Model
 }
@@ -45,18 +40,6 @@ func (m RootModel) Init() tea.Cmd {
 
 func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-
-	switch msg := msg.(type) {
-	case NavigateMsg:
-		m.compass, cmd = m.compass.Push(msg.To, nil)
-		return m, cmd
-
-	case NavigateBackMsg:
-		m.compass, cmd = m.compass.Pop()
-		return m, cmd
-	}
-
-	// Forward everything else to the active screen.
 	m.compass, cmd = m.compass.Update(msg)
 	return m, cmd
 }
@@ -95,13 +78,13 @@ func (m HomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selected = m.cursor
 			switch m.cursor {
 			case 0:
-				return m, func() tea.Msg { return NavigateMsg{To: DetailScreen} }
+				return m, compass.PushCmd(DetailScreen, nil)
 			case 1:
 				return m, tea.Quit
 			}
 
 		case "esc":
-			return m, func() tea.Msg { return NavigateBackMsg{} }
+			return m, compass.PopCmd()
 
 		case "q":
 			return m, tea.Quit
@@ -135,7 +118,7 @@ func (m DetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc", "backspace":
-			return m, func() tea.Msg { return NavigateBackMsg{} }
+			return m, compass.PopCmd()
 		case "q":
 			return m, tea.Quit
 		}
